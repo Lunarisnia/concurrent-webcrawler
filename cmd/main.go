@@ -7,9 +7,8 @@ import (
 	"golang.org/x/net/html"
 )
 
-// TODO: make this crawler into a proper one
 func crawl() error {
-	response, err := http.Get("https://www.google.com/")
+	response, err := http.Get("http://localhost:3000")
 	if err != nil {
 		return err
 	}
@@ -22,7 +21,19 @@ func crawl() error {
 		if tt == html.ErrorToken {
 			return z.Err()
 		}
-		fmt.Println(z.Token())
+		name, _ := z.TagName()
+		if string(name) == "a" {
+			for {
+				key, val, more := z.TagAttr()
+				if string(key) == "href" {
+					fmt.Println(string(val))
+				}
+
+				if !more {
+					break
+				}
+			}
+		}
 	}
 }
 
