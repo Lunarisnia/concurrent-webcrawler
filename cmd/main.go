@@ -3,14 +3,22 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"strings"
+	"time"
 
 	"golang.org/x/net/html"
 )
 
-func crawl() error {
-	response, err := http.Get("http://localhost:3000")
+var URLPool []string
+
+func checkIfValidURL(URI string) bool {
+	return strings.Contains(URI, "https://en.")
+}
+
+func crawl(URL string, target string) (bool, error) {
+	response, err := http.Get(URL)
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer response.Body.Close()
 
@@ -19,14 +27,19 @@ func crawl() error {
 	for {
 		tt := z.Next()
 		if tt == html.ErrorToken {
-			return z.Err()
+			return false, z.Err()
 		}
 		name, _ := z.TagName()
 		if string(name) == "a" {
 			for {
 				key, val, more := z.TagAttr()
 				if string(key) == "href" {
-					fmt.Println(string(val))
+					if string(val) == target {
+						return true, nil
+					}
+					if checkIfValidURL(string(val)) {
+						URLPool = append(URLPool, string(val))
+					}
 				}
 
 				if !more {
@@ -38,5 +51,17 @@ func crawl() error {
 }
 
 func main() {
-	crawl()
+	start := time.Now()
+	target := "https://en.wikipedia.org/wiki/Indonesia/"
+	found, _ := crawl("https://en.wikipedia.org/wiki/Main_Page", target)
+	if !found {
+		for i := 0; i < len(URLPool); i++ {
+			found, _ = crawl(URLPool[i], target)
+			if found {
+				break
+			}
+		}
+	}
+	duration := time.Since(start)
+	fmt.Println(target, " Found in: ", duration)
 }
